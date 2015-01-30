@@ -14,7 +14,7 @@ t(4)
 ```
 
 ## Bucket fill tool
-[Source](https://github.com/ButuzGOL/algoritms/blob/master/bucket-fill-tool.js)
+[Source](https://github.com/ButuzGOL/algoritms/blob/master/bucket-fill-tool.js)  
 [Source recursion](https://github.com/ButuzGOL/algoritms/blob/master/bucket-fill-tool-recursion.js)
 
 **Input**
