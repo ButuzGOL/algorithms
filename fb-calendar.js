@@ -1,17 +1,17 @@
 var events = [
-  {start: 0, end: 30},
-  {start: 30, end: 100},
-  {start: 80, end: 160},
-  {start: 110, end: 240},
-  {start: 110, end: 180},
-  {start: 170, end: 230},
-  {start: 170, end: 240},
-  {start: 170, end: 220},
-  {start: 190, end: 260},
-  {start: 230, end: 300},
-  {start: 240, end: 280},
-  {start: 250, end: 290},
-  {start: 300, end: 330}
+  { start: 0, end: 30 },
+  { start: 30, end: 100 },
+  { start: 80, end: 160 },
+  { start: 110, end: 240 },
+  { start: 110, end: 180 },
+  { start: 170, end: 230 },
+  { start: 170, end: 240 },
+  { start: 170, end: 220 },
+  { start: 190, end: 260 },
+  { start: 230, end: 300 },
+  { start: 240, end: 280 },
+  { start: 250, end: 290 },
+  { start: 300, end: 330 }
 ];
 
 function build(events) {
