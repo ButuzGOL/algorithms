@@ -14,7 +14,7 @@ t(4)
 ```
 
 ## Bucket fill tool
-[Source](https://github.com/ButuzGOL/algoritms/blob/master/bucket-fill-tool.js)  
+[Source](https://github.com/ButuzGOL/algoritms/blob/master/bucket-fill-tool.js)
 [Source recursion](https://github.com/ButuzGOL/algoritms/blob/master/bucket-fill-tool-recursion.js)
 
 **Input**
@@ -100,4 +100,19 @@ draw(build(events));
 // 320 ||                                                                              |
 // 330 ||______________________________________________________________________________|
 
+```
+
+## Bubble sort
+[Source](https://github.com/ButuzGOL/algoritms/blob/master/bubble-sort.js)
+
+**Input**
+```
+// [ 5, 4, 1, 6, 8, 10, 25 ]
+```
+
+**Output**
+```
+console.log(sort(array));
+
+// [ 1, 4, 5, 6, 8, 10, 25 ]
 ```
