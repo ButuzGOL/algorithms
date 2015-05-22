@@ -6,6 +6,6 @@ function numerology(date){
   return num;
 }
 
-// numerology(new Date('09/07/1989'));
+// console.log(numerology(new Date('09/07/1989')));
 //
 // 7
