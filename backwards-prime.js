@@ -1,29 +1,38 @@
+/*
+Backwards Read Primes are primes that when read backwards in base 10 (from right to left) are a different prime. 
+(This rules out primes which are palindromes.)
+Example: 
+13 17 31 37 71 73 are Backwards Read Primes
+*/
 function backwardsPrime(start, stop) {
   var primes = [];
   var backwardsPrimes = [];
-  for(var i = start; i < stop; i++) {
-    k = true;
-    for(var j = 2; j < i; j++) {
-      if (i % j === 0) k = false; 
+  
+  function isPrime(num) {
+    for(var i = 2; i <= Math.sqrt(num); i++) {
+      if (num % i === 0) return false; 
     }
-     
-    if (k) {
-      primes.push(i);
-    }
+    return true;
   }
   
   function reverse(str) {
     return Number(str.toString().split('').reverse().join(''));
   }
-console.log(primes)
+  
+  for(var i = start; i <= stop; i++) {
+    if (isPrime(i)) primes.push(i);
+  }
+  
   for(var i = 0; i < primes.length; i++) {
-    if (primes[i].toString().length === 1) continue;
-     
-    if (primes.some(function(prime) { return reverse(prime) !== prime && reverse(prime) === primes[i]; })) {
+    if (reverse(primes[i]) !== primes[i] && isPrime(reverse(primes[i]))) {
       backwardsPrimes.push(primes[i]);
     }
-     
   }
-
+  
   return backwardsPrimes; 
 }
+
+backwardsPrime(2, 100);
+// [13, 17, 31, 37, 71, 73, 79, 97] 
+backwardsPrime(9900, 10000);
+// [9923, 9931, 9941, 9967]
