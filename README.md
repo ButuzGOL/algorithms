@@ -202,6 +202,125 @@ console.log(phoneNumber([1, 2, 3, 4, 5, 6, 7, 8, 9, 0]));
 // (123) 456-7890
 ```
 
+### Moduli number
+> A number system with moduli is deﬁned by a vector of k moduli, [m1,m2, ···,mk].  
+The moduli must be pairwise co-prime, which means that, for any pair of moduli, the only common factor is 1.  
+In such a system each number n is represented by a string "-x1--x2-- ... --xk-" of its residues, one for each modulus. The product m1 ... mk must be greater than the given number n which is to be converted in the moduli number system.  
+For example, if we use the system [2, 3, 5] the number n = 11 is represented by "-1--2--1-",  
+the number n = 23 by "-1--2--3-". If we use the system [8, 7, 5, 3] the number n = 187 becomes "-3--5--2--1-".  
+You will be given a number n (n >= 0) and a system S = [m1,m2, ···,mk] and you will return a string "-x1--x2-- ...--xk-" representing the number n in the system S.  
+If the moduli are not pairwise co-prime or if the product m1 ... mk is not greater than n, return "Not applicable".  
+Examples:  
+fromNb2Str(11 [2,3,5]) -> "-1--2--1-"  
+fromNb2Str(6, [2, 3, 4]) -> "Not applicable", since 2 and 4 are not coprime  
+fromNb2Str(7, [2, 3]) -> "Not applicable" since 2 * 3 < 7
+
+```javascript
+function fromNb2Str(n,sys) {
+  if (sys.reduce(function(p,c) { return p * c; }) < n) return 'Not applicable';
+
+  var min = Math.min.apply(null, sys);
+  for(var i = 2, k; i <= min; i++) {
+    k = 0;
+    for(var j = 0; j < sys.length; j++) {
+      if (sys[j] % i === 0) {
+        k++;
+      } 
+    }  
+    if (k > 1) return 'Not applicable';
+  }
+
+  return '-' + sys.map(function(i) { return n % i; }).join('--') + '-';
+}
+
+fromNb2Str(187, [8, 7, 5, 3]);
+
+// -3--5--2--1-
+```
+
+### Backwards prime
+> Backwards Read Primes are primes that when read backwards in base 10 (from right to left) are a different prime. 
+(This rules out primes which are palindromes.)  
+Example:
+13 17 31 37 71 73 are Backwards Read Primes
+
+```javascript
+function backwardsPrime(start, stop) {
+  var primes = [];
+  var backwardsPrimes = [];
+  
+  function isPrime(num) {
+    for(var i = 2; i <= Math.sqrt(num); i++) {
+      if (num % i === 0) return false; 
+    }
+    return true;
+  }
+  
+  function reverse(str) {
+    return Number(str.toString().split('').reverse().join(''));
+  }
+  
+  for(var i = start; i <= stop; i++) {
+    if (isPrime(i)) primes.push(i);
+  }
+  
+  for(var i = 0; i < primes.length; i++) {
+    if (reverse(primes[i]) !== primes[i] && isPrime(reverse(primes[i]))) {
+      backwardsPrimes.push(primes[i]);
+    }
+  }
+  
+  return backwardsPrimes; 
+}
+
+backwardsPrime(2, 100);
+// [13, 17, 31, 37, 71, 73, 79, 97] 
+
+backwardsPrime(9900, 10000);
+// [9923, 9931, 9941, 9967]
+```
+
+### Heavy ball
+> There are 8 balls numbered from 0 to 7. Seven of them have the same weight. One is heavier. Your task is to find it's number.  
+So where's the catch, you may ask. Well - the scales is very old. You can use it only 3 TIMES before the scale breaks.
+
+```javascript
+function findBall() {
+  var left = [0, 1, 2, 3];
+  var right = [4, 5, 6, 7];
+  
+  if (scales.getWeight(left, right) === -1) {
+    right = [left[2], left[3]];
+    left = [left[0], left[1]];
+  } else {
+    left = [right[0], right[1]];
+    right = [right[2], right[3]];    
+  }
+  
+  if (scales.getWeight(left, right) === -1) {
+    right = [left[1]];
+    left = [left[0]];
+  } else {
+    left = [right[0]];
+    right = [right[1]];
+  }
+  
+  if (scales.getWeight(left, right) === -1) return left[0];
+  return right[0];
+}
+
+findBall({
+  getWeight: function(left, right) {
+    var heavier = 2;
+    if (left.indexOf(heavier) !== -1) return -1;
+    if (right.indexOf(heavier) !== -1) return 1;
+    return 0;
+  }
+});
+
+// 2
+```
+
 ## License
 
 MIT © [ButuzGOL](https://butuzgol.github.io)
