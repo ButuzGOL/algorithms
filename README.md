@@ -321,6 +321,106 @@ findBall({
 // 2
 ```
 
+### Not visible cubes
+> Imagine there's a big cube consisting of n^3 small cubes. Calculate, how many small cubes are not visible from outside. 
+For example, if we have a cube which has 4 cubes in a row, then the function should return 8, because there are 8 cubes inside our cube (2 cubes in each dimension)
+
+```javascript
+function notVisibleCubes(n) {
+  if (n === 1) return 0;
+  return n * n * n - (n * n * 2 + ((n - 2) * n * 2) + ((n - 2) * (n - 2) * 2));
+}
+
+notVisibleCubes(3);
+// 1
+```
+
+### Excel sheet column numbers
+> That given a column title as it appears in an Excel sheet, returns its corresponding column number.  
+All column titles will be uppercase.
+
+```javascript
+function titleToNumber(title) {
+  var dict = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  var res = 0;
+  for(var i = 0; i < title.length - 1; i++) res += Math.pow(dict.length, i + 1);
+  
+  var index = 0;
+  for(var letter of title) {
+    res += dict.indexOf(letter) * Math.pow(dict.length, title.length - ++index); 
+  }
+
+  return res + 1;
+}
+
+titleToNumber('AA');
+// 27
+```
+
+### Row sum odd numbers
+> Given the triangle of consecutive odd numbers:
+             1 |
+          3     5 |
+       7     9    11 |
+   13    15    17    19 |
+21    23    25    27    29 |
+...
+Calculate the row sums of this triangle from the row index.
+
+```javascript
+function rowSumOddNumbers(n) {
+  var res = 0;
+  var i = 0;
+  var items = 0;
+  var lvl = 1;
+
+  while(lvl - 1 !== n) {
+    i++;
+    if (i % 2 !== 0) {
+      items++;
+
+      if (lvl === n) res += i;
+      if (items === lvl) {
+        lvl++;
+        items = 0;
+      }
+    }
+
+  };
+  
+  return res;
+}
+
+rowSumOddNumbers(2);
+// 8
+```
+
+### Green glass door
+> Step through my green glass door.  
+You can take the moon, but not the sun.  
+You can take your slippers, but not your sandals.  
+You can go through yelling, but not shouting.  
+You can't run through fast, but you can run with speed.  
+You can take a sheet, but not your blanket.  
+You can wear your glasses, but not your contacts.  
+Have you figured it out? Good! Then write a program that can figure it out as well.
+
+```javascript
+function stepThroughWith(s) {
+  var last = s[0];
+  for(var i = 1; i < s.length; i++) {
+    if (last === s[i]) return true; 
+    last = s[i];
+  }
+  
+  return false;
+}
+
+stepThroughWith('moon');
+// true
+```
+
 ## License
 
 MIT © [ButuzGOL](https://butuzgol.github.io)
