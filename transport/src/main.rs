@@ -3,6 +3,15 @@
 
 const EMPTY: i32 = -777;
 
+fn _print_2d(text: &str, vec: &Vec<Vec<i32>>) {
+  println!("{}", text);
+  println!("[");
+  for el in vec {
+    println!("{:?}", el);
+  }
+  println!("]");
+}
+
 fn _convert_nested_a_v<T: std::clone::Clone, const N: usize, const M: usize>(
   arr: [[T; M]; N],
 ) -> Vec<Vec<T>> {
@@ -30,6 +39,17 @@ fn is_closed(production_place: &Vec<i32>, production_need: &Vec<i32>) -> (bool, 
     return (true, 0);
   } else {
     return (false, sum_p_place - sum_p_need);
+  }
+}
+
+#[cfg(test)]
+mod tests_is_closed {
+  use super::*;
+  #[test]
+  fn is_closed_true() {
+    let production_place = vec![1, 2, 3];
+    let production_need = vec![2, 1, 3];
+    assert_eq!(is_closed(&production_place, &production_need), (true, 0));
   }
 }
 
@@ -90,7 +110,7 @@ fn get_send_list_min_price(
 
   min_list.sort();
 
-  println!("Min {:?}", min_list);
+  // println!("Min {:?}", min_list);
 
   let mut send_list = _get_empty_2d_array(data);
   let mut new_production_place = production_place.clone();
@@ -226,36 +246,36 @@ fn get_uv_lines_price(
   return sum;
 }
 
-fn get_corners(
+fn get_gammas(
   data: &Vec<Vec<i32>>,
   send_list: &Vec<Vec<i32>>,
   u_line: &Vec<i32>,
   v_line: &Vec<i32>,
 ) -> Vec<Vec<i32>> {
-  let mut corners = data.clone();
+  let mut gammas = data.clone();
 
   for i in 0..send_list.len() {
     for j in 0..send_list[i].len() {
       if send_list[i][j] == 0 {
         // Alternative way
-        // corners[i][j] = (u_line[i] + v_line[j]) - data[i][j] as i32;
-        corners[i][j] = data[i][j] - (u_line[i] + v_line[j]);
+        // gammas[i][j] = (u_line[i] + v_line[j]) - data[i][j] as i32;
+        gammas[i][j] = data[i][j] - (u_line[i] + v_line[j]);
       } else {
-        corners[i][j] = EMPTY;
+        gammas[i][j] = EMPTY;
       }
     }
   }
 
-  return corners;
+  return gammas;
 }
 
-fn is_optimal(corners: &Vec<Vec<i32>>) -> bool {
+fn is_optimal(gammas: &Vec<Vec<i32>>) -> bool {
   let mut result = true;
-  for i in 0..corners.len() {
-    for j in 0..corners[i].len() {
+  for i in 0..gammas.len() {
+    for j in 0..gammas[i].len() {
       // Alternative way
-      // if corners[i][j] != EMPTY && corners[i][j] > 0 {
-      if corners[i][j] != EMPTY && corners[i][j] < 0 {
+      // if gammas[i][j] != EMPTY && gammas[i][j] > 0 {
+      if gammas[i][j] != EMPTY && gammas[i][j] < 0 {
         result = false;
         break;
       }
@@ -265,24 +285,26 @@ fn is_optimal(corners: &Vec<Vec<i32>>) -> bool {
 }
 
 // TODO: should be found programmatically
-fn get_matrix_indexes(corners: &Vec<Vec<i32>>, send_list: &Vec<Vec<i32>>) {
+fn get_matrix_indexes(gammas: &Vec<Vec<i32>>, send_list: &Vec<Vec<i32>>) -> Vec<[usize; 2]> {
   let mut max_delta = 0;
   let mut index_max_delta = [0, 0];
 
-  for i in 0..corners.len() {
-    for j in 0..corners[i].len() {
+  for i in 0..gammas.len() {
+    for j in 0..gammas[i].len() {
       // Alternative way
-      // if max_delta < corners[i][j] && corners[i][j] != EMPTY {
-      if max_delta > corners[i][j] && corners[i][j] != EMPTY {
-        max_delta = corners[i][j];
+      // if max_delta < gammas[i][j] && gammas[i][j] != EMPTY {
+      if max_delta > gammas[i][j] && gammas[i][j] != EMPTY {
+        max_delta = gammas[i][j];
         index_max_delta = [i, j];
       }
     }
   }
 
-  println!("index_max_delta {:?}", max_delta);
-  println!("index_max_delta {:?}", index_max_delta);
+  println!("max delta {:?}", max_delta);
+  println!("index max delta {:?}", index_max_delta);
   println!("send_list {:?}", send_list);
+
+  return Vec::new();
 }
 
 fn get_new_send_list(matrix_indexes: Vec<[usize; 2]>, send_list: &Vec<Vec<i32>>) -> Vec<Vec<i32>> {
@@ -297,7 +319,7 @@ fn get_new_send_list(matrix_indexes: Vec<[usize; 2]>, send_list: &Vec<Vec<i32>>)
     }
   }
 
-  println!("min_minus_value {}", min_minus_value);
+  println!("min minus value {}", min_minus_value);
 
   let mut result = send_list.clone();
 
@@ -329,11 +351,11 @@ fn get_price(data: &Vec<Vec<i32>>, send_list: &Vec<Vec<i32>>) -> i32 {
   return sum;
 }
 
-fn has_alternative(corners: &Vec<Vec<i32>>) -> bool {
+fn has_alternative(gammas: &Vec<Vec<i32>>) -> bool {
   let mut result = false;
-  for i in 0..corners.len() {
-    for j in 0..corners[i].len() {
-      if corners[i][j] == 0 {
+  for i in 0..gammas.len() {
+    for j in 0..gammas[i].len() {
+      if gammas[i][j] == 0 {
         result = true;
         break;
       }
@@ -368,63 +390,44 @@ fn transport_task<const N0: usize, const M: usize, const N: usize>(
   let mut production_place = production_place.to_vec();
   let mut production_need = production_need.to_vec();
 
-  // Steps
   let closed = is_closed(&production_place, &production_need);
   println!("Closed: {:?}", closed);
 
   (data, production_place, production_need) =
     get_data_if_opened(&data, &production_place, &production_need);
 
-  let mut send_list;
-  if is_diagonal {
-    send_list = get_send_list_diagonal(&data, &production_place, &production_need);
-  } else {
-    send_list = get_send_list_min_price(&data, &production_place, &production_need);
-  }
-
-  println!("Send list {:?}", send_list);
-
-  let degenerated = is_degenerated(&send_list, &data);
-  println!("Degenerated {:?}", degenerated);
-  send_list = get_send_list_if_not_degenerated(&send_list, &data);
-
-  let (u_line, v_line) = get_uv_lines(&send_list, &data);
-  println!("U line V line {:?} {:?}", u_line, v_line);
-  println!(
-    "Check price {:?}",
-    check_price(
-      &data,
-      &send_list,
-      &production_place,
-      &production_need,
-      &u_line,
-      &v_line,
-    ),
-  );
-
-  let mut corners = get_corners(&data, &send_list, &u_line, &v_line);
-  println!("Corners {:?}", corners);
-
-  let mut optimal = is_optimal(&corners);
-  let mut price = get_price(&data, &send_list);
+  let mut optimal = false;
+  let mut price = 0;
   let mut index = 0;
   let mut alternative;
 
-  println!("Optimal {:#?}", optimal);
-  println!("Price {:#?}", price);
+  let mut gammas = Vec::new();
+  let mut send_list = Vec::new();
 
   while !optimal {
-    println!("\n----- Cycle {} ------", index + 1);
+    println!("\n----- Cycle {} ------", index);
 
-    get_matrix_indexes(&corners, &send_list);
-    let matrix_indexes = matrix_indexes_list[index].clone();
+    if index == 0 {
+      if is_diagonal {
+        send_list = get_send_list_diagonal(&data, &production_place, &production_need);
+      } else {
+        send_list = get_send_list_min_price(&data, &production_place, &production_need);
+      }
+    } else {
+      get_matrix_indexes(&gammas, &send_list);
+      let matrix_indexes = matrix_indexes_list[index - 1].clone();
 
-    send_list = get_new_send_list(matrix_indexes, &send_list);
-    println!("Send list {:?}", send_list);
+      send_list = get_new_send_list(matrix_indexes, &send_list);
+    }
+
+    _print_2d("Send list", &send_list);
+
+    let degenerated = is_degenerated(&send_list, &data);
+    println!("Degenerated {:?}", degenerated);
+    send_list = get_send_list_if_not_degenerated(&send_list, &data);
 
     let (u_line, v_line) = get_uv_lines(&send_list, &data);
-    println!("U line V line {:?} {:?}", u_line, v_line);
-
+    println!("U line {:?} \nV line {:?}", u_line, v_line);
     println!(
       "Check price {:?}",
       check_price(
@@ -437,14 +440,16 @@ fn transport_task<const N0: usize, const M: usize, const N: usize>(
       ),
     );
 
-    corners = get_corners(&data, &send_list, &u_line, &v_line);
-    println!("Corners {:?}", corners);
+    gammas = get_gammas(&data, &send_list, &u_line, &v_line);
+    _print_2d("Gammas", &gammas);
 
-    optimal = is_optimal(&corners);
-    println!("Optimal {:?}", optimal);
+    optimal = is_optimal(&gammas);
+    println!("Optimal {:#?}", optimal);
+
     price = get_price(&data, &send_list);
-    println!("Price {:?}", price);
-    alternative = has_alternative(&corners);
+    println!("Price {:#?}", price);
+
+    alternative = has_alternative(&gammas);
     println!("Alternative {:?}", alternative);
 
     index += 1;
@@ -628,11 +633,11 @@ fn main() {
     );
   }
 
-  task_00();
-  task_0();
-  task_1();
-  task_2();
-  task_000();
-  task_3();
+  // task_00();
+  // task_0();
+  // task_1();
+  // task_2();
+  // task_000();
+  // task_3();
   task_4();
 }
