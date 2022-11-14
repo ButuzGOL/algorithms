@@ -1,6 +1,9 @@
 // M|i - place
 // N|j - move
 
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+
 const EMPTY: i32 = -777;
 
 fn _print_2d(text: &str, vec: &Vec<Vec<i32>>) {
@@ -15,11 +18,11 @@ fn _print_2d(text: &str, vec: &Vec<Vec<i32>>) {
 fn _convert_nested_a_v<T: std::clone::Clone, const N: usize, const M: usize>(
   arr: [[T; M]; N],
 ) -> Vec<Vec<T>> {
-  let mut ret = Vec::with_capacity(N);
-  for v in arr.iter() {
-    ret.push(v.to_vec());
+  let mut result = Vec::with_capacity(N);
+  for el in arr.iter() {
+    result.push(el.to_vec());
   }
-  ret
+  result
 }
 
 fn _get_empty_2d_array(data: &Vec<Vec<i32>>) -> Vec<Vec<i32>> {
@@ -284,8 +287,10 @@ fn is_optimal(gammas: &Vec<Vec<i32>>) -> bool {
   return result;
 }
 
-// TODO: should be found programmatically
-fn get_matrix_indexes(gammas: &Vec<Vec<i32>>, send_list: &Vec<Vec<i32>>) -> Vec<[usize; 2]> {
+fn get_matrix_indexes(
+  gammas: &Vec<Vec<i32>>,
+  send_list: &Vec<Vec<i32>>,
+) -> (Vec<Vec<[usize; 2]>>, Vec<[usize; 2]>) {
   let mut max_delta = 0;
   let mut index_max_delta = [0, 0];
 
@@ -300,11 +305,360 @@ fn get_matrix_indexes(gammas: &Vec<Vec<i32>>, send_list: &Vec<Vec<i32>>) -> Vec<
     }
   }
 
+  println!("DATA for get_matrix_indexes");
   println!("max delta {:?}", max_delta);
   println!("index max delta {:?}", index_max_delta);
+  println!("gammas {:?}", gammas);
   println!("send_list {:?}", send_list);
 
-  return Vec::new();
+  #[derive(Debug, Serialize)]
+  struct Node {
+    children: Vec<Node>,
+    index: [usize; 2],
+    parent_indexes: Vec<[usize; 2]>,
+    found: bool,
+  }
+
+  impl Node {
+    pub fn new(index: [usize; 2], parent_indexes: Vec<[usize; 2]>) -> Node {
+      Node {
+        children: vec![],
+        index,
+        parent_indexes,
+        found: false,
+      }
+    }
+  }
+
+  // [
+  //    0   1  2  3
+  //   [0+, 0, 0, 45-], 0
+  //   [0, 60, 0, 20], 1
+  //   [40-, 0, 0, 10+] 2
+  // ]
+  // 0,0 -> 0,3 -> 1,3 -> 2,3 -> 2,0 -> found !
+  //                   -> 1,1 -> false !
+  //            -> 2,3 -> 2,0 -> found
+  //                   -> 1,3 -> 1,1 -> false
+  //     -> 2,0 -> 2,3 -> 1,3 -> 1,1 -> false
+  //                          -> 0,3 -> found
+  //                   -> 0,3 -> found
+
+  fn is_root(node: &Node) -> bool {
+    return node.parent_indexes.len() == 0;
+  }
+
+  fn next(node: &mut Node, send_list: &Vec<Vec<i32>>, index_max_delta: [usize; 2]) {
+    let [i_index, j_index] = node.index;
+
+    for i in 0..4 {
+      let mut new_i_index = i_index;
+      let mut new_j_index = j_index;
+      loop {
+        if i == 0 {
+          new_j_index += 1;
+        } else if i == 1 {
+          new_i_index += 1;
+        } else if i == 2 {
+          if new_j_index == 0 {
+            break;
+          }
+          new_j_index -= 1;
+        } else {
+          if new_i_index == 0 {
+            break;
+          }
+          new_i_index -= 1;
+        }
+
+        if new_j_index == send_list[0].len() || new_i_index == send_list.len() {
+          break;
+        }
+
+        let index = [new_i_index, new_j_index];
+
+        if send_list[new_i_index][new_j_index] != 0 && !node.parent_indexes.contains(&index) {
+          let mut parent_indexes = node.parent_indexes.clone();
+          parent_indexes.push(node.index);
+          node.children.push(Node::new(index, parent_indexes));
+        }
+
+        fn is_line_changed(index_max_delta: [usize; 2], path: &Vec<[usize; 2]>) -> bool {
+          let mut lines_changed = (false, false);
+          for el in path.iter() {
+            if el[0] != index_max_delta[0] {
+              lines_changed.0 = true;
+            }
+            if el[1] != index_max_delta[1] {
+              lines_changed.1 = true;
+            }
+          }
+
+          return lines_changed.0 && lines_changed.1;
+        }
+
+        let mut path = node.parent_indexes.clone();
+        path.push(node.index);
+        if index == index_max_delta
+          && node.parent_indexes.len() > 1
+          && is_line_changed(index_max_delta, &path)
+        {
+          node.children = Vec::new();
+          node.found = true;
+          return;
+        }
+      }
+    }
+  }
+
+  let mut root = Node::new(index_max_delta, Vec::new());
+
+  fn walk(node: &mut Node, send_list: &Vec<Vec<i32>>, index_max_delta: [usize; 2]) {
+    if is_root(node) {
+      next(node, &send_list, index_max_delta);
+    }
+    for el in &mut node.children {
+      next(el, &send_list, index_max_delta);
+      walk(el, &send_list, index_max_delta);
+    }
+  }
+
+  walk(&mut root, &send_list, index_max_delta);
+  // println!("{:?}", serde_json::to_string(&root));
+
+  fn found_valid_path(node: &Node) -> Vec<Vec<[usize; 2]>> {
+    let mut result = Vec::new();
+    let mut valid_paths = Vec::new();
+
+    fn walk(
+      node: &Node,
+      result: &mut Vec<Vec<[usize; 2]>>,
+      level: usize,
+      current_index: i32,
+      valid_paths: &mut Vec<usize>,
+    ) {
+      if node.found {
+        valid_paths.push(current_index as usize);
+        return;
+      }
+
+      for (index, el) in node.children.iter().enumerate() {
+        let mut next_index = current_index;
+        if current_index == -1 {
+          result.push(Vec::new());
+          next_index = result.len() as i32 - 1;
+          result[next_index as usize].push(el.index);
+        } else {
+          if index == 0 {
+            result[current_index as usize].push(el.index);
+          } else {
+            let mut s_vec = result[current_index as usize].as_slice();
+            s_vec = &s_vec[0..level];
+            let mut vec = s_vec.to_vec();
+            vec.push(el.index);
+            next_index = result.len() as i32;
+            result.push(vec);
+          }
+        }
+
+        walk(&el, result, level + 1, next_index, valid_paths);
+      }
+    }
+
+    walk(node, &mut result, 0, -1, &mut valid_paths);
+
+    result = result
+      .into_iter()
+      .enumerate()
+      .filter(|(index, _)| valid_paths.contains(index))
+      .map(|(_, el)| el)
+      .collect::<Vec<_>>();
+
+    return result;
+  }
+
+  let mut path_list = found_valid_path(&root);
+  path_list.sort_by(|a, b| a.len().cmp(&b.len()));
+
+  let mut path = vec![index_max_delta.clone()];
+  path = [path, path_list[0].clone()].concat();
+
+  return (path_list, path);
+}
+
+#[cfg(test)]
+mod tests_get_matrix_indexes {
+  use super::*;
+  #[test]
+  fn get_matrix_indexes_compare() {
+    // [
+    //   [0+, 0, 0, 45-],
+    //   [0, 60, 0, 20],
+    //   [40-, 0, 0, 10+]
+    // ]
+
+    let gammas = _convert_nested_a_v([
+      [-3, -1, EMPTY, EMPTY],
+      [0, EMPTY, 6, EMPTY],
+      [EMPTY, 1, 6, EMPTY],
+    ]);
+    let send_list = _convert_nested_a_v([[0, 0, 0, 45], [0, 60, 0, 20], [40, 0, 0, 10]]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    assert_eq!(result, [[0, 0], [0, 3], [2, 3], [2, 0]].to_vec());
+  }
+
+  #[test]
+  fn get_matrix_indexes_case1() {
+    // task_0
+    // [
+    //   [0+, 0, 25, 45-],
+    //   [0, 60, 0, 20],
+    //   [40-, 0, 0, 10+]
+    // ]
+
+    let gammas = _convert_nested_a_v([
+      [-3, -1, EMPTY, EMPTY],
+      [0, EMPTY, 6, EMPTY],
+      [EMPTY, 1, 6, EMPTY],
+    ]);
+    let send_list = _convert_nested_a_v([[0, 0, 25, 45], [0, 60, 0, 20], [40, 0, 0, 10]]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    assert_eq!(result, [[0, 0], [0, 3], [2, 3], [2, 0]].to_vec());
+  }
+
+  #[test]
+  fn get_matrix_indexes_case2() {
+    // task_0
+    // [
+    //   [40, 0-, 25, 5+],
+    //   [0, 60+, 0, 20-],
+    //   [0, 0, 0, 50],
+    // ]
+
+    let gammas = _convert_nested_a_v([
+      [EMPTY, -1, EMPTY, EMPTY],
+      [3, EMPTY, 6, EMPTY],
+      [3, 1, 6, EMPTY],
+    ]);
+    let send_list = _convert_nested_a_v([[40, 0, 25, 5], [0, 60, 0, 20], [0, 0, 0, 50]]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    assert_eq!(result, [[0, 1], [0, 3], [1, 3], [1, 1]].to_vec());
+  }
+
+  #[test]
+  fn get_matrix_indexes_case3() {
+    // task_1
+    // [
+    //   [-888+, 0, 25, 25-],
+    //   [0, 10, 0, 10],
+    //   [30-, 0, 0, 0+]
+    // ]
+
+    let gammas = _convert_nested_a_v([
+      [EMPTY, -1, EMPTY, -EMPTY],
+      [3, EMPTY, 6, -EMPTY],
+      [EMPTY, -2, 3, -3],
+    ]);
+    let send_list = _convert_nested_a_v([
+      [DEGENERATED_FILLED, 0, 25, 25],
+      [0, 10, 0, 10],
+      [30, 0, 0, 0],
+    ]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    assert_eq!(result, [[2, 3], [2, 0], [0, 0], [0, 3]].to_vec());
+  }
+
+  #[test]
+  fn get_matrix_indexes_case4() {
+    // task_2
+    // [
+    //   [0, 60, 0],
+    //   [0, 20+, 50-],
+    //   [30, 0, 0],
+    //   [60, 10-, 0+]
+    // ]
+
+    let gammas = _convert_nested_a_v([
+      [0, EMPTY, 3],
+      [0, EMPTY, EMPTY],
+      [EMPTY, 2, 7],
+      [EMPTY, EMPTY, -1],
+    ]);
+    let send_list = _convert_nested_a_v([[0, 60, 0], [0, 20, 50], [30, 0, 0], [60, 10, 0]]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    assert_eq!(result, [[3, 2], [3, 1], [1, 1], [1, 2]].to_vec());
+  }
+
+  #[test]
+  fn get_matrix_indexes_case5() {
+    // task_2
+    // [
+    //   [0+, 60-, 0],
+    //   [0, 30+, 40-],
+    //   [30, 0, 0],
+    //   [60-, 0, 10+]
+    // ]
+
+    let gammas = _convert_nested_a_v([
+      [-1, EMPTY, 3],
+      [-1, EMPTY, EMPTY],
+      [EMPTY, 3, 8],
+      [EMPTY, 1, EMPTY],
+    ]);
+    let send_list = _convert_nested_a_v([[0, 60, 0], [0, 30, 40], [30, 0, 0], [60, 0, 10]]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    assert_eq!(
+      result,
+      [[0, 0], [0, 1], [1, 1], [1, 2], [3, 2], [3, 0]].to_vec()
+    );
+  }
+
+  #[test]
+  fn get_matrix_indexes_case6() {
+    // task_4
+    // [
+    //   [0, 3500+, 500-],
+    //   [0+, 3000-, 0],
+    //   [2000-, 0, 3000+],
+    //   [2700, 0, 0]
+    // ]
+
+    let gammas = _convert_nested_a_v([
+      [200, EMPTY, EMPTY],
+      [-200, EMPTY, 0],
+      [EMPTY, 200, EMPTY],
+      [EMPTY, 100, 0],
+    ]);
+    let send_list =
+      _convert_nested_a_v([[0, 3500, 500], [0, 3000, 0], [2000, 0, 3000], [2700, 0, 0]]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    assert_eq!(
+      result,
+      [[1, 0], [1, 1], [0, 1], [0, 2], [2, 2], [2, 0]].to_vec()
+    );
+  }
+
+  #[test]
+  fn get_matrix_indexes_case7() {
+    // task_4
+    // [
+    //   [0, 4000, 0],
+    //   [500+, 2500-, 0],
+    //   [1500, 0, 3500],
+    //   [2700-, 0+, 0]
+    // ]
+
+    let gammas = _convert_nested_a_v([
+      [400, EMPTY, 200],
+      [EMPTY, EMPTY, 200],
+      [EMPTY, 0, EMPTY],
+      [EMPTY, -100, 0],
+    ]);
+    let send_list =
+      _convert_nested_a_v([[0, 4000, 0], [500, 2500, 0], [1500, 0, 3500], [2700, 0, 0]]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    assert_eq!(result, [[3, 1], [3, 0], [1, 0], [1, 1]].to_vec());
+  }
 }
 
 fn get_new_send_list(matrix_indexes: Vec<[usize; 2]>, send_list: &Vec<Vec<i32>>) -> Vec<Vec<i32>> {
@@ -414,8 +768,8 @@ fn transport_task<const N0: usize, const M: usize, const N: usize>(
         send_list = get_send_list_min_price(&data, &production_place, &production_need);
       }
     } else {
-      get_matrix_indexes(&gammas, &send_list);
-      let matrix_indexes = matrix_indexes_list[index - 1].clone();
+      let (_, matrix_indexes) = get_matrix_indexes(&gammas, &send_list);
+      // let matrix_indexes = matrix_indexes_list[index - 1].clone();
 
       send_list = get_new_send_list(matrix_indexes, &send_list);
     }
@@ -625,8 +979,8 @@ fn main() {
       production_place,
       production_need,
       [
-        [[1, 0], [2, 0], [2, 2], [0, 2], [0, 1], [1, 1]].to_vec(),
-        [[3, 1], [1, 1], [1, 0], [3, 0]].to_vec(),
+        [[1, 0], [1, 1], [0, 1], [0, 2], [2, 2], [2, 0]].to_vec(),
+        [[3, 1], [3, 0], [1, 0], [1, 1]].to_vec(),
       ],
       2700000,
       false,
@@ -639,5 +993,5 @@ fn main() {
   // task_2();
   // task_000();
   // task_3();
-  task_4();
+  // task_4();
 }
