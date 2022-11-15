@@ -1,8 +1,8 @@
 // M|i - place
 // N|j - move
 
-use serde::{Deserialize, Serialize};
-use serde_json::Result;
+// use serde::{Deserialize, Serialize};
+// use serde_json::Result;
 
 const EMPTY: i32 = -777;
 
@@ -104,14 +104,21 @@ fn get_send_list_min_price(
   production_place: &Vec<i32>,
   production_need: &Vec<i32>,
 ) -> Vec<Vec<i32>> {
-  let mut min_list = Vec::new();
+  let mut min_list = vec![];
+  let mut zero_list = vec![];
   for i in 0..data.len() {
     for j in 0..data[i].len() {
-      min_list.push([data[i][j], i as i32, j as i32]);
+      let val = data[i][j];
+      if val == 0 {
+        zero_list.push([val, i as i32, j as i32]);
+      } else {
+        min_list.push([val, i as i32, j as i32]);
+      }
     }
   }
 
   min_list.sort();
+  min_list = [min_list, zero_list].concat();
 
   // println!("Min {:?}", min_list);
 
@@ -119,15 +126,15 @@ fn get_send_list_min_price(
   let mut new_production_place = production_place.clone();
   let mut new_production_need = production_need.clone();
 
-  for i in &min_list {
-    let mut val = new_production_need[i[2] as usize];
-    if val > new_production_place[i[1] as usize] {
-      val = new_production_place[i[1] as usize];
+  for el in &min_list {
+    let mut val = new_production_need[el[2] as usize];
+    if val > new_production_place[el[1] as usize] {
+      val = new_production_place[el[1] as usize];
     }
 
-    send_list[i[1] as usize][i[2] as usize] = val;
-    new_production_place[i[1] as usize] -= val;
-    new_production_need[i[2] as usize] -= val;
+    send_list[el[1] as usize][el[2] as usize] = val;
+    new_production_place[el[1] as usize] -= val;
+    new_production_need[el[2] as usize] -= val;
   }
 
   return send_list;
@@ -290,6 +297,7 @@ fn is_optimal(gammas: &Vec<Vec<i32>>) -> bool {
 fn get_matrix_indexes(
   gammas: &Vec<Vec<i32>>,
   send_list: &Vec<Vec<i32>>,
+  skip_indexes: &Vec<[usize; 2]>,
 ) -> (Vec<Vec<[usize; 2]>>, Vec<[usize; 2]>) {
   let mut max_delta = 0;
   let mut index_max_delta = [0, 0];
@@ -305,13 +313,25 @@ fn get_matrix_indexes(
     }
   }
 
-  println!("DATA for get_matrix_indexes");
-  println!("max delta {:?}", max_delta);
-  println!("index max delta {:?}", index_max_delta);
-  println!("gammas {:?}", gammas);
-  println!("send_list {:?}", send_list);
+  if max_delta == 0 {
+    for i in 0..gammas.len() {
+      for j in 0..gammas[i].len() {
+        if gammas[i][j] == 0 && !skip_indexes.contains(&[i, j]) {
+          index_max_delta = [i, j];
+          break;
+        }
+      }
+    }
+  }
 
-  #[derive(Debug, Serialize)]
+  println!("DATA for get_matrix_indexes");
+  _print_2d("Gammas", &gammas);
+  _print_2d("Send list", &send_list);
+  println!("Max delta {:?}", max_delta);
+  println!("Index max delta {:?}", index_max_delta);
+
+  // #[derive(Debug, Serialize)]
+  #[derive(Debug)]
   struct Node {
     children: Vec<Node>,
     index: [usize; 2],
@@ -503,7 +523,7 @@ mod tests_get_matrix_indexes {
       [EMPTY, 1, 6, EMPTY],
     ]);
     let send_list = _convert_nested_a_v([[0, 0, 0, 45], [0, 60, 0, 20], [40, 0, 0, 10]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
     assert_eq!(result, [[0, 0], [0, 3], [2, 3], [2, 0]].to_vec());
   }
 
@@ -522,7 +542,7 @@ mod tests_get_matrix_indexes {
       [EMPTY, 1, 6, EMPTY],
     ]);
     let send_list = _convert_nested_a_v([[0, 0, 25, 45], [0, 60, 0, 20], [40, 0, 0, 10]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
     assert_eq!(result, [[0, 0], [0, 3], [2, 3], [2, 0]].to_vec());
   }
 
@@ -541,7 +561,7 @@ mod tests_get_matrix_indexes {
       [3, 1, 6, EMPTY],
     ]);
     let send_list = _convert_nested_a_v([[40, 0, 25, 5], [0, 60, 0, 20], [0, 0, 0, 50]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
     assert_eq!(result, [[0, 1], [0, 3], [1, 3], [1, 1]].to_vec());
   }
 
@@ -564,7 +584,7 @@ mod tests_get_matrix_indexes {
       [0, 10, 0, 10],
       [30, 0, 0, 0],
     ]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
     assert_eq!(result, [[2, 3], [2, 0], [0, 0], [0, 3]].to_vec());
   }
 
@@ -585,7 +605,7 @@ mod tests_get_matrix_indexes {
       [EMPTY, EMPTY, -1],
     ]);
     let send_list = _convert_nested_a_v([[0, 60, 0], [0, 20, 50], [30, 0, 0], [60, 10, 0]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
     assert_eq!(result, [[3, 2], [3, 1], [1, 1], [1, 2]].to_vec());
   }
 
@@ -606,7 +626,7 @@ mod tests_get_matrix_indexes {
       [EMPTY, 1, EMPTY],
     ]);
     let send_list = _convert_nested_a_v([[0, 60, 0], [0, 30, 40], [30, 0, 0], [60, 0, 10]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
     assert_eq!(
       result,
       [[0, 0], [0, 1], [1, 1], [1, 2], [3, 2], [3, 0]].to_vec()
@@ -631,7 +651,7 @@ mod tests_get_matrix_indexes {
     ]);
     let send_list =
       _convert_nested_a_v([[0, 3500, 500], [0, 3000, 0], [2000, 0, 3000], [2700, 0, 0]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
     assert_eq!(
       result,
       [[1, 0], [1, 1], [0, 1], [0, 2], [2, 2], [2, 0]].to_vec()
@@ -656,7 +676,7 @@ mod tests_get_matrix_indexes {
     ]);
     let send_list =
       _convert_nested_a_v([[0, 4000, 0], [500, 2500, 0], [1500, 0, 3500], [2700, 0, 0]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
     assert_eq!(result, [[3, 1], [3, 0], [1, 0], [1, 1]].to_vec());
   }
 }
@@ -673,7 +693,7 @@ fn get_new_send_list(matrix_indexes: Vec<[usize; 2]>, send_list: &Vec<Vec<i32>>)
     }
   }
 
-  println!("min minus value {}", min_minus_value);
+  println!("Min minus value {}", min_minus_value);
 
   let mut result = send_list.clone();
 
@@ -705,17 +725,21 @@ fn get_price(data: &Vec<Vec<i32>>, send_list: &Vec<Vec<i32>>) -> i32 {
   return sum;
 }
 
-fn has_alternative(gammas: &Vec<Vec<i32>>) -> bool {
-  let mut result = false;
+fn get_alternative_indexes(gammas: &Vec<Vec<i32>>) -> Vec<[usize; 2]> {
+  let mut result = Vec::new();
   for i in 0..gammas.len() {
     for j in 0..gammas[i].len() {
       if gammas[i][j] == 0 {
-        result = true;
+        result.push([i, j]);
         break;
       }
     }
   }
   return result;
+}
+
+fn has_alternative(gammas: &Vec<Vec<i32>>) -> bool {
+  return get_alternative_indexes(gammas).len() > 0;
 }
 
 fn check_price(
@@ -732,6 +756,29 @@ fn check_price(
   return (uv_lines_price == price, uv_lines_price, price);
 }
 
+fn get_path(
+  send_list: &Vec<Vec<i32>>,
+  production_place: &Vec<i32>,
+  production_need: &Vec<i32>,
+) -> Vec<Vec<i32>> {
+  let mut result = send_list.clone();
+
+  let (closed, diff_val) = is_closed(production_place, production_need);
+  if closed {
+    return result;
+  }
+
+  if diff_val > 0 {
+    for el in &mut result {
+      el.pop();
+    }
+    return result;
+  }
+
+  result.pop();
+  return result;
+}
+
 fn transport_task<const N0: usize, const M: usize, const N: usize>(
   data: [[i32; N]; M],
   production_place: [i32; M],
@@ -740,9 +787,16 @@ fn transport_task<const N0: usize, const M: usize, const N: usize>(
   result_price: i32,
   is_diagonal: bool,
 ) {
+  let production_place_initial = production_place.clone().to_vec();
+  let production_need_initial = production_need.clone().to_vec();
+
   let mut data = _convert_nested_a_v(data);
   let mut production_place = production_place.to_vec();
   let mut production_need = production_need.to_vec();
+
+  _print_2d("Data", &data);
+  println!("Production place {:?}", &production_place);
+  println!("Production need {:?}", &production_need);
 
   let closed = is_closed(&production_place, &production_need);
   println!("Closed: {:?}", closed);
@@ -750,25 +804,25 @@ fn transport_task<const N0: usize, const M: usize, const N: usize>(
   (data, production_place, production_need) =
     get_data_if_opened(&data, &production_place, &production_need);
 
-  let mut optimal = false;
-  let mut price = 0;
-  let mut index = 0;
-  let mut alternative;
-
-  let mut gammas = Vec::new();
-  let mut send_list = Vec::new();
-
-  while !optimal {
-    println!("\n----- Cycle {} ------", index);
-
+  fn go_cycle(
+    data: &Vec<Vec<i32>>,
+    production_place: &Vec<i32>,
+    production_need: &Vec<i32>,
+    production_place_initial: &Vec<i32>,
+    production_need_initial: &Vec<i32>,
+    initial_send_list: &Vec<Vec<i32>>,
+    initial_gammas: &Vec<Vec<i32>>,
+    index: i32,
+    skip_matrix_indexes: &Vec<[usize; 2]>,
+  ) -> (Vec<Vec<i32>>, Vec<Vec<i32>>, bool, i32, bool) {
+    println!("---Cycle--- {}", index);
+    let mut send_list = initial_send_list.clone();
+    let mut gammas = initial_gammas.clone();
     if index == 0 {
-      if is_diagonal {
-        send_list = get_send_list_diagonal(&data, &production_place, &production_need);
-      } else {
-        send_list = get_send_list_min_price(&data, &production_place, &production_need);
-      }
+      send_list = get_send_list_min_price(&data, &production_place, &production_need);
     } else {
-      let (_, matrix_indexes) = get_matrix_indexes(&gammas, &send_list);
+      let (_, matrix_indexes) = get_matrix_indexes(&gammas, &send_list, skip_matrix_indexes);
+      println!("Matrix indexes {:?}", matrix_indexes);
       // let matrix_indexes = matrix_indexes_list[index - 1].clone();
 
       send_list = get_new_send_list(matrix_indexes, &send_list);
@@ -797,16 +851,86 @@ fn transport_task<const N0: usize, const M: usize, const N: usize>(
     gammas = get_gammas(&data, &send_list, &u_line, &v_line);
     _print_2d("Gammas", &gammas);
 
-    optimal = is_optimal(&gammas);
-    println!("Optimal {:#?}", optimal);
-
-    price = get_price(&data, &send_list);
+    let price = get_price(&data, &send_list);
     println!("Price {:#?}", price);
 
-    alternative = has_alternative(&gammas);
-    println!("Alternative {:?}", alternative);
+    let optimal = is_optimal(&gammas);
+    let alternative = has_alternative(&gammas);
+    println!("Optimal {:#?}", optimal);
+    println!("Alternative {:#?}", alternative);
+
+    if optimal {
+      let path = get_path(
+        &send_list,
+        &production_place_initial,
+        &production_need_initial,
+      );
+      _print_2d("Path", &path);
+    }
+
+    return (send_list, gammas, optimal, price, alternative);
+  }
+
+  let mut optimal;
+  let mut price;
+  let mut index = 0;
+  let mut alternative;
+
+  let mut gammas = Vec::new();
+  let mut send_list = Vec::new();
+
+  loop {
+    (send_list, gammas, optimal, price, alternative) = go_cycle(
+      &data,
+      &production_place,
+      &production_need,
+      &production_place_initial,
+      &production_need_initial,
+      &send_list,
+      &gammas,
+      index,
+      &vec![],
+    );
 
     index += 1;
+
+    if optimal {
+      break;
+    }
+  }
+
+  if alternative {
+    let send_list_alternative = send_list.clone();
+    let gammas_alternative = gammas.clone();
+    let mut alternative_indexes = get_alternative_indexes(&gammas);
+    alternative_indexes.reverse();
+
+    let mut alternative_index = 0;
+
+    println!("Alternative indexes {:?}", alternative_indexes);
+
+    println!("---Alternative---");
+
+    loop {
+      let skipped_matrix_indexes = alternative_indexes[0..alternative_index as usize].to_vec();
+      go_cycle(
+        &data,
+        &production_place,
+        &production_need,
+        &production_place_initial,
+        &production_need_initial,
+        &send_list_alternative,
+        &gammas_alternative,
+        index,
+        &skipped_matrix_indexes,
+      );
+      index += 1;
+      alternative_index += 1;
+
+      if skipped_matrix_indexes.len() + 1 == alternative_indexes.len() {
+        break;
+      }
+    }
   }
 
   assert_eq!(price, result_price, "Error result");
@@ -991,7 +1115,6 @@ fn main() {
   // task_0();
   // task_1();
   // task_2();
-  // task_000();
   // task_3();
   // task_4();
 }
