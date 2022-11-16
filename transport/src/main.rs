@@ -104,8 +104,8 @@ fn get_send_list_min_price(
   production_place: &Vec<i32>,
   production_need: &Vec<i32>,
 ) -> Vec<Vec<i32>> {
-  let mut min_list = vec![];
-  let mut zero_list = vec![];
+  let mut min_list = Vec::new();
+  let mut zero_list = Vec::new();
   for i in 0..data.len() {
     for j in 0..data[i].len() {
       let val = data[i][j];
@@ -342,7 +342,7 @@ fn get_matrix_indexes(
   impl Node {
     pub fn new(index: [usize; 2], parent_indexes: Vec<[usize; 2]>) -> Node {
       Node {
-        children: vec![],
+        children: Vec::new(),
         index,
         parent_indexes,
         found: false,
@@ -523,7 +523,7 @@ mod tests_get_matrix_indexes {
       [EMPTY, 1, 6, EMPTY],
     ]);
     let send_list = _convert_nested_a_v([[0, 0, 0, 45], [0, 60, 0, 20], [40, 0, 0, 10]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &Vec::new());
     assert_eq!(result, [[0, 0], [0, 3], [2, 3], [2, 0]].to_vec());
   }
 
@@ -542,7 +542,7 @@ mod tests_get_matrix_indexes {
       [EMPTY, 1, 6, EMPTY],
     ]);
     let send_list = _convert_nested_a_v([[0, 0, 25, 45], [0, 60, 0, 20], [40, 0, 0, 10]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &Vec::new());
     assert_eq!(result, [[0, 0], [0, 3], [2, 3], [2, 0]].to_vec());
   }
 
@@ -561,7 +561,7 @@ mod tests_get_matrix_indexes {
       [3, 1, 6, EMPTY],
     ]);
     let send_list = _convert_nested_a_v([[40, 0, 25, 5], [0, 60, 0, 20], [0, 0, 0, 50]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &Vec::new());
     assert_eq!(result, [[0, 1], [0, 3], [1, 3], [1, 1]].to_vec());
   }
 
@@ -584,7 +584,7 @@ mod tests_get_matrix_indexes {
       [0, 10, 0, 10],
       [30, 0, 0, 0],
     ]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &Vec::new());
     assert_eq!(result, [[2, 3], [2, 0], [0, 0], [0, 3]].to_vec());
   }
 
@@ -605,7 +605,7 @@ mod tests_get_matrix_indexes {
       [EMPTY, EMPTY, -1],
     ]);
     let send_list = _convert_nested_a_v([[0, 60, 0], [0, 20, 50], [30, 0, 0], [60, 10, 0]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &Vec::new());
     assert_eq!(result, [[3, 2], [3, 1], [1, 1], [1, 2]].to_vec());
   }
 
@@ -626,7 +626,7 @@ mod tests_get_matrix_indexes {
       [EMPTY, 1, EMPTY],
     ]);
     let send_list = _convert_nested_a_v([[0, 60, 0], [0, 30, 40], [30, 0, 0], [60, 0, 10]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &Vec::new());
     assert_eq!(
       result,
       [[0, 0], [0, 1], [1, 1], [1, 2], [3, 2], [3, 0]].to_vec()
@@ -651,7 +651,7 @@ mod tests_get_matrix_indexes {
     ]);
     let send_list =
       _convert_nested_a_v([[0, 3500, 500], [0, 3000, 0], [2000, 0, 3000], [2700, 0, 0]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &Vec::new());
     assert_eq!(
       result,
       [[1, 0], [1, 1], [0, 1], [0, 2], [2, 2], [2, 0]].to_vec()
@@ -676,7 +676,7 @@ mod tests_get_matrix_indexes {
     ]);
     let send_list =
       _convert_nested_a_v([[0, 4000, 0], [500, 2500, 0], [1500, 0, 3500], [2700, 0, 0]]);
-    let (_, result) = get_matrix_indexes(&gammas, &send_list, &vec![]);
+    let (_, result) = get_matrix_indexes(&gammas, &send_list, &Vec::new());
     assert_eq!(result, [[3, 1], [3, 0], [1, 0], [1, 1]].to_vec());
   }
 }
@@ -889,7 +889,7 @@ fn transport_task<const N0: usize, const M: usize, const N: usize>(
       &send_list,
       &gammas,
       index,
-      &vec![],
+      &Vec::new(),
     );
 
     index += 1;
@@ -1115,6 +1115,7 @@ fn main() {
   // task_0();
   // task_1();
   // task_2();
+  task_000();
   // task_3();
   // task_4();
 }
