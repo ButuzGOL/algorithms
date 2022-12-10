@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "cargo",
+      "command": "build",
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "rust: cargo build transport",
+      "options": {
+        "cwd": "${workspaceRoot}/transport"
+      }
+    },
+    {
+      "type": "cargo",
+      "command": "build",
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "rust: cargo build gomori",
+      "options": {
+        "cwd": "${workspaceRoot}/gomori"
+      }
+    }
+  ]
+}

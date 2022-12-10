@@ -9,19 +9,38 @@ fn _print_2d(text: &str, vec: &Vec<Vec<f32>>) {
   println!("]");
 }
 
-fn get_clean_num(f: f32) -> f32 {
+fn get_clean_num4(f: f32) -> f32 {
   (f * 1000.0).round() / 1000.0
+}
+
+fn get_clean_num_3(f: f32) -> f32 {
+  (f * 100.0).round() / 100.0
 }
 
 fn get_whole_frac(f: f32) -> (f32, f32) {
   if f > 0.0 {
-    let frac = get_clean_num(f - f.abs().floor());
-    (get_clean_num(f - frac), frac)
+    let frac = get_clean_num4(f - f.abs().floor());
+    (get_clean_num4(f - frac), frac)
   } else {
     let new_f = f * -1.0;
-    let frac = get_clean_num(new_f - new_f.abs().floor());
-    (get_clean_num(new_f - frac) * -1.0, frac * -1.0)
+    let frac = get_clean_num4(new_f - new_f.abs().floor());
+    (get_clean_num4(new_f - frac) * -1.0, frac * -1.0)
   }
+}
+
+fn get_xn_based_on_current_indexes(
+  x_n: &Vec<Vec<f32>>,
+  current_x_indexes: &Vec<usize>,
+) -> Vec<Vec<f32>> {
+  let mut result = Vec::new();
+
+  for el in current_x_indexes {
+    let mut line = x_n[*el].clone();
+    line.insert(0, *el as f32 + 1.0);
+    result.push(line);
+  }
+
+  result
 }
 
 #[cfg(test)]
@@ -32,7 +51,7 @@ mod tests_get_whole_frac {
     assert_eq!(get_whole_frac(1.1), (1.0, 0.1));
     assert_eq!(get_whole_frac(0.200000048), (0.0, 0.2));
     assert_eq!(get_whole_frac(-1.200000048), (-1.0, -0.2));
-    assert_eq!(get_clean_num(1.5 / 1.25), 1.2);
+    assert_eq!(get_clean_num4(1.5 / 1.25), 1.2);
   }
 }
 
@@ -196,11 +215,46 @@ fn fx_has_minus(fx: &Vec<f32>) -> bool {
 fn basis_has_fractional(basis: &Vec<f32>, current_x_indexes: &Vec<usize>) -> bool {
   basis.iter().enumerate().any(|(index, el)| {
     if current_x_indexes.contains(&index) {
-      el.round() != *el
+      el.round() != get_clean_num_3(*el)
     } else {
       false
     }
   })
+}
+
+mod tests_basis_has_fractional {
+  use super::*;
+  #[test]
+  fn get_whole_frac_full() {
+    assert_eq!(
+      basis_has_fractional(&vec![1.0, 2.0, 3.0], &vec![0, 1]),
+      false
+    );
+    assert_eq!(
+      basis_has_fractional(&vec![3.99990869, 2.0, 3.2], &vec![0, 1]),
+      false
+    );
+    assert_eq!(
+      basis_has_fractional(&vec![3.2, 2.0, 3.0], &vec![0, 1]),
+      true
+    );
+
+    assert_eq!(
+      basis_has_fractional(
+        &vec![
+          3.99990869,      // !
+          2.00027871,      // !
+          3.9987874,       // !
+          -0.000101923943, // !
+          -0.952000021,
+          2.99839997, // !
+          -0.936999976
+        ],
+        &vec![0, 1, 3, 2, 5]
+      ),
+      false
+    );
+  }
 }
 
 fn increase_x(
@@ -278,13 +332,27 @@ fn get_marks_fx(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, current_x_indexes: &Vec<usiz
       {
         EMPTY
       } else {
-        el / x_n[last_index][index]
+        let mut val = el / x_n[last_index][index];
+        if val < 0.0 {
+          val *= -1.0;
+        }
+        val
       }
     })
     .collect::<Vec<_>>()
 }
 
-fn gomori(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, basis: &Vec<f32>) {
+fn get_clean_basis(basis: &Vec<f32>, current_x_indexes: &Vec<usize>) -> Vec<f32> {
+  let mut result = Vec::new();
+
+  for el in current_x_indexes {
+    result.push(basis[*el]);
+  }
+
+  result
+}
+
+fn gomori(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, basis: &Vec<f32>, result_bassis: Vec<f32>) {
   let mut x_n = x_n.clone();
   let mut fx = fx.clone();
   let mut basis = basis.clone();
@@ -293,6 +361,8 @@ fn gomori(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, basis: &Vec<f32>) {
 
   println!("Data");
   _print_2d("Xn", &x_n);
+  let x_n_f = get_xn_based_on_current_indexes(&x_n, &current_x_indexes);
+  _print_2d("XnF", &x_n_f);
   println!("Fx {:?}", fx);
   println!("Basis {:?}", basis);
   println!("Current indexes {:?}", current_x_indexes);
@@ -330,6 +400,8 @@ fn gomori(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, basis: &Vec<f32>) {
 
     println!("Change x {ee_row_index} to new x {ee_cell_index}");
     _print_2d("Xn", &x_n);
+    let x_n_f = get_xn_based_on_current_indexes(&x_n, &current_x_indexes);
+    _print_2d("XnF", &x_n_f);
     println!("Basis {:?}", basis);
 
     // need to get all zeros in re (min_index) cell
@@ -342,7 +414,9 @@ fn gomori(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, basis: &Vec<f32>) {
       ee_cell_index,
     );
     _print_2d("Zeros Xn", &x_n);
-    println!("Basis {:?} Fx {:?}", basis, fx);
+    let x_n_f = get_xn_based_on_current_indexes(&x_n, &current_x_indexes);
+    _print_2d("XnF", &x_n_f);
+    println!("Basis {:?} \nFx {:?}", basis, fx);
 
     is_fx_has_minus = fx_has_minus(&fx);
 
@@ -358,10 +432,13 @@ fn gomori(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, basis: &Vec<f32>) {
 
     (x_n, fx, basis, current_x_indexes) = increase_x(&x_n, &fx, &basis, &current_x_indexes);
     _print_2d("Xn", &x_n);
+    let x_n_f = get_xn_based_on_current_indexes(&x_n, &current_x_indexes);
+    _print_2d("XnF", &x_n_f);
     println!("Fx {:?}", fx);
     println!("Basis {:?}", basis);
 
-    let marks = get_marks_fx(&x_n, &fx, &current_x_indexes);
+    let mut marks = get_marks_fx(&x_n, &fx, &current_x_indexes);
+    // marks = to_minus(&marks);
     println!("Marks {:?}", marks);
 
     // Enabling element
@@ -383,6 +460,8 @@ fn gomori(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, basis: &Vec<f32>) {
     );
     println!("Change x {ee_row_index} to new x {ee_cell_index}");
     _print_2d("Xn", &x_n);
+    let x_n_f = get_xn_based_on_current_indexes(&x_n, &current_x_indexes);
+    _print_2d("XnF", &x_n_f);
     println!("Basis {:?}", basis);
 
     // need to get all zeros in re (min_index) cell
@@ -395,15 +474,28 @@ fn gomori(x_n: &Vec<Vec<f32>>, fx: &Vec<f32>, basis: &Vec<f32>) {
       ee_cell_index,
     );
     _print_2d("Zeros Xn", &x_n);
+    let x_n_f = get_xn_based_on_current_indexes(&x_n, &current_x_indexes);
+    _print_2d("XnF", &x_n_f);
     println!("Basis {:?} \nFx {:?}", basis, fx);
 
     is_basis_has_fractional = basis_has_fractional(&basis, &current_x_indexes);
 
     index += 1;
   }
+
+  assert_eq!(basis, result_bassis);
+
+  println!(
+    "Clean Basis {:?}",
+    get_clean_basis(&basis, &current_x_indexes)
+  );
 }
 
 fn task_0() {
+  // f = 2x1 + 3x2 -> max
+  // x1 + 4x2 ≤ 14
+  // 2x1 + 3x2 ≤ 12
+
   let x_n: Vec<Vec<f32>> = vec![
     vec![],
     vec![],
@@ -413,9 +505,41 @@ fn task_0() {
   let fx: Vec<f32> = vec![2.0, 3.0, 0.0, 0.0, 0.0];
   let basis: Vec<f32> = vec![EMPTY, EMPTY, 14.0, 12.0];
 
-  gomori(&x_n, &fx, &basis);
+  gomori(&x_n, &fx, &basis, vec![3.0, 2.0, 3.0, 1.5, 1.0, -0.5]);
+}
+
+fn task_1() {
+  // f = 3x1 + 2x2 -> max
+  // 2x1 + 5x2 ≤ 9 + N,
+  // 5x1 + 2x2 ≤ 11 + N,
+  // xi ≥ 0, xi – whole, i=1, 2,
+
+  let n: f32 = 13.0;
+  let x_n: Vec<Vec<f32>> = vec![
+    vec![],
+    vec![],
+    vec![2.0, 5.0, 1.0, 0.0],
+    vec![5.0, 2.0, 0.0, 1.0],
+  ];
+  let fx: Vec<f32> = vec![3.0, 2.0, 0.0, 0.0, 0.0];
+  let basis: Vec<f32> = vec![EMPTY, EMPTY, 9.0 + n, 11.0 + n];
+
+  gomori(
+    &x_n,
+    &fx,
+    &basis,
+    vec![
+      3.9999087,
+      2.0002787,
+      3.9987874,
+      -0.00010192394,
+      -0.952,
+      2.9984,
+      -0.937,
+    ],
+  )
 }
 
 fn main() {
-  task_0();
+  task_1();
 }
