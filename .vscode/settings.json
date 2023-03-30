@@ -1,3 +1,3 @@
 {
-  "rust-analyzer.linkedProjects": ["./gomori/Cargo.toml"]
+  "rust-analyzer.linkedProjects": ["./transport/Cargo.toml"]
 }
